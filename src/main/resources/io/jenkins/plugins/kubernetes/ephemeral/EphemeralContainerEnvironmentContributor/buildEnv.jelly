@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:t="/lib/hudson">
+    <t:buildEnvVar name="KUBERNETES_CLOUD_EPHEMERAL_CONTAINERS_ENABLED">
+        <j:out value="Ephemeral containers enabled for the current agent. Only present if in context of Kubernetes agent. 'true' if enabled, 'false' otherwise."/>
+    </t:buildEnvVar>
+</j:jelly>

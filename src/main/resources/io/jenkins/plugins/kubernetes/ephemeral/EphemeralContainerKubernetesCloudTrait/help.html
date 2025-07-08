@@ -1,0 +1,58 @@
+<div>
+    <p>
+        Enable execution of steps within <a href="https://kubernetes.io/docs/concepts/workloads/pods/ephemeral-containers/">Ephemeral Containers</a>.
+        Ephemeral containers are added to the build agent Pod using the <code>withEphemeralContainer</code> step. The newly
+        created container will share the same workspace volume and <a href="https://kubernetes.io/docs/concepts/workloads/pods/#pod-networking">network</a>
+        as other containers in the Pod and so behave similar to the <a href="https://www.jenkins.io/doc/pipeline/steps/kubernetes/#container-run-build-steps-in-a-container">container</a>
+        step. The difference is <code>withEphemeralContainer</code> will terminated the container when the <code>withEphemeralContainer</code> block exits.
+    </p>
+    <pre>
+podTemplate {
+    node(POD_LABEL) {
+        stage('Build a Maven project') {
+            git 'https://github.com/jenkinsci/kubernetes-plugin.git'
+            withEphemeralContainer(image: 'maven') {
+                sh 'mvn -B -ntp clean package -DskipTests'
+            }
+        }
+        stage('Build a Golang project') {
+            git url: 'https://github.com/hashicorp/terraform.git', branch: 'main'
+            withEphemeralContainer(image: 'golang') {
+                sh '''
+                mkdir -p /go/src/github.com/hashicorp
+                ln -s `pwd` /go/src/github.com/hashicorp/terraform
+                cd /go/src/github.com/hashicorp/terraform && make
+                '''
+            }
+        }
+    }
+}</pre>
+    <p>
+        The Ephemeral Container spec does not allow for specifying resources, but will still be subject to the
+        <a href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/">Pod overall
+        resource limits</a>. The kubelet may evict a Pod if an ephemeral container causes the Pod to exceed its resource
+        allocation. <strong>To avoid eviction it is advisable to increase the limits of the primary container to account for
+        potential ephemeral container resource requirements.</strong>
+    </p>
+    <p>
+        In Kubernetes, the size limit for objects stored in etcd, including pod specs, is 1.5MB per key-value pair.
+        This means there is a finite number of ephemeral containers that may be added to a build agent. This is usually
+        not much of an issue for most pipelines, but could become an issue for long-running Pods. <strong>For this reason
+        it is not recommended to re-use agent nodes for multiple builds. Setting the Pod Template idle minutes property
+        ("Time in minutes to retain agent when idle") to <code>0</code> is a good practice.</strong>
+    </p>
+    <p>
+        Because pipelines are able to run arbitrary images, some clouds may choose to disable this feature or limit
+        the allowed images (i.e. <code>Container Image Rule</code>) for security reasons.
+    </p>
+    <p>
+        When enabled the build environment variable <code>KUBERNETES_CLOUD_EPHEMERAL_CONTAINERS_ENABLED=true</code> will be
+        added to signal to pipeline scripts the <code>withEphemeralContainer</code> step is available for use.
+    </p>
+    <p></p>
+    <div class="jenkins-alert jenkins-alert-info">
+        <strong>Note:</strong> Ephemeral Containers are GA in Kubernetes 1.25+. Prior versions may require a
+        <a href="https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/">feature gate</a> to
+        enable.
+    </div>
+</div>

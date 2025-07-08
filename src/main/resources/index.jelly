@@ -1,0 +1,5 @@
+<?jelly escape-by-default='true'?>
+<div>
+    This plugin is an extension of <a href="https://plugins.jenkins.io/kubernetes/">Kubernetes Plugin</a> that add
+    support for running pipeline steps in the context of an <a href="https://kubernetes.io/docs/concepts/workloads/pods/ephemeral-containers/">ephemeral container</a>.
+</div>

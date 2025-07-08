@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+
+    <f:entry field="names" title="${%Image Names}" description="${%List of image name patterns}">
+        <f:textarea default="docker.io/library/*" codemirror-mode="shell" codemirror-config='"lineNumbers": true' />
+    </f:entry>
+
+    <f:entry title="${%Action}" field="action">
+        <f:enum default="ALLOW">
+            ${it.description}
+        </f:enum>
+    </f:entry>
+</j:jelly>

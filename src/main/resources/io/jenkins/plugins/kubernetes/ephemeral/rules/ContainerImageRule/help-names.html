@@ -1,0 +1,38 @@
+<div>
+    <div>
+        List of image names to match.
+        <ul>
+            <li>Use "<code>*</code>" to match anything</li>
+            <li>Lines that start with "<code>#</code>" or empty will be ignored</li>
+            <li>Only the domain and path components are matched. Tag and digest components are ignored.</li>
+            <li>Each name is separated by a newline.</li>
+        </ul>
+    </div>
+    <div>
+        All image references are normalized before matching against the patterns.
+        <ul>
+            <li>If no domain component, "<code>docker.io</code>" will be added</li>
+            <li>If domain is "<code>docker.io</code>" and no repo component "<code>library/</code>" will be added
+                <ul>
+                    <li><code>maven</code> &rarr; <code>docker.io/library/maven</code></li>
+                    <li><code>docker.io/maven</code> &rarr; <code>docker.io/library/maven</code></li>
+                    <li><code>example.com/maven</code> &rarr; <code>example.com/maven</code></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+
+    <div>
+        <h5>Examples</h5>
+<pre># match all docker hub images
+docker.io/*
+
+# match all official Docker Hub images
+docker.io/library/*
+
+# match maven and node from docker hub
+docker.io/library/maven
+docker.io/library/node
+</pre>
+    </div>
+</div>
