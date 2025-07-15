@@ -1,6 +1,8 @@
 package io.jenkins.plugins.kubernetes.ephemeral.rules;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStep;
 import io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStepRule;

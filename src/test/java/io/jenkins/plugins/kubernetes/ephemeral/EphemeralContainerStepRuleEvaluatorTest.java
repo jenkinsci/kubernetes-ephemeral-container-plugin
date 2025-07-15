@@ -1,7 +1,9 @@
 package io.jenkins.plugins.kubernetes.ephemeral;
 
-import static io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStepRule.Action.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStepRule.Action.ALLOW;
+import static io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStepRule.Action.REJECT;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import edu.umd.cs.findbugs.annotations.NonNull;

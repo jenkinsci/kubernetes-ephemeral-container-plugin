@@ -5,7 +5,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * Container image reference. Image references parsed by this class are always normalized:

@@ -1,6 +1,7 @@
 package io.jenkins.plugins.kubernetes.ephemeral;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import hudson.util.FormValidation;
 import org.junit.jupiter.params.ParameterizedTest;

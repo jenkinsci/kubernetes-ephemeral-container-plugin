@@ -1,6 +1,11 @@
 package io.jenkins.plugins.kubernetes.ephemeral;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.jenkins.plugins.kubernetes.ephemeral.rules.ContainerImageRule;
 import java.util.List;
