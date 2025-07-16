@@ -196,7 +196,7 @@ public class EphemeralContainerStep extends Step implements Serializable {
             return Set.of(Node.class, FilePath.class, Run.class, Launcher.class, TaskListener.class);
         }
 
-        @SuppressWarnings("unused") // Used by jelly
+        @SuppressWarnings({"unused", "lgtm[jenkins/csrf]"}) // Used by jelly, no side effects
         public FormValidation doCheckImage(@QueryParameter String value) {
             if (StringUtils.isEmpty(value)) {
                 return FormValidation.error("Image is mandatory");
@@ -207,7 +207,7 @@ public class EphemeralContainerStep extends Step implements Serializable {
             }
         }
 
-        @SuppressWarnings("unused") // Used by jelly
+        @SuppressWarnings({"unused", "lgtm[jenkins/csrf]"}) // Used by jelly, no side effects
         public FormValidation doCheckTargetContainer(@QueryParameter String value) {
             if (PodTemplateUtils.validateContainerName(value)) {
                 return FormValidation.ok();
@@ -216,12 +216,12 @@ public class EphemeralContainerStep extends Step implements Serializable {
             }
         }
 
-        @SuppressWarnings("unused") // Used by jelly
+        @SuppressWarnings({"unused", "lgtm[jenkins/csrf]"}) // Used by jelly, no side effects
         public FormValidation doCheckRunAsUser(@QueryParameter String value) {
             return validRunAsId(value);
         }
 
-        @SuppressWarnings("unused") // Used by jelly
+        @SuppressWarnings({"unused", "lgtm[jenkins/csrf]"}) // Used by jelly, no side effects
         public FormValidation doCheckRunAsGroup(@QueryParameter String value) {
             return validRunAsId(value);
         }
