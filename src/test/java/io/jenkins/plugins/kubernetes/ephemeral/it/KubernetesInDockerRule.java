@@ -1,6 +1,7 @@
 package io.jenkins.plugins.kubernetes.ephemeral.it;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeNoException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -8,7 +9,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.SystemUtils;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -52,8 +52,13 @@ public class KubernetesInDockerRule implements TestRule {
         ProcessBuilder bldr =
                 new ProcessBuilder(kindCmd(), "create", "cluster", "--name", cluster, "--wait", "5m").inheritIO();
         bldr.environment().put("KUBECONFIG", kubeconfig.toString());
-        int code = bldr.start().waitFor();
-        assertEquals("kind cluster not created successfully", 0, code);
+        try {
+            int code = bldr.start().waitFor();
+            assertEquals("kind cluster not created successfully", 0, code);
+        } catch (IOException ioe) {
+            assumeNoException(ioe);
+        }
+
         System.err.println("kind cluster " + cluster + " created");
         return cluster;
     }
