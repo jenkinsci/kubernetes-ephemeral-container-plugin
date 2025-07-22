@@ -76,9 +76,8 @@ public class KubernetesInDockerRule implements TestRule {
     private String kindCmd() {
         // in a CI environment use the binary downloaded by Maven.
         if (StringUtils.equalsIgnoreCase(System.getenv("CI"), "true")) {
-            String kindExe = SystemUtils.IS_OS_WINDOWS ? "kind.exe" : "kind";
-            Path kind = Paths.get("target", "kind", kindExe);
-            if (Files.exists(kind) && Files.isRegularFile(kind) && Files.isExecutable(kind)) {
+            Path kind = Paths.get("target", "kind", "kind");
+            if (Files.exists(kind)) {
                 System.err.println("Using " + kind);
                 return kind.toString();
             }
