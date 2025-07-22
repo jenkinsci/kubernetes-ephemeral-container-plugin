@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.SystemUtils;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -75,7 +76,8 @@ public class KubernetesInDockerRule implements TestRule {
     private String kindCmd() {
         // in a CI environment use the binary downloaded by Maven.
         if (StringUtils.equalsIgnoreCase(System.getenv("CI"), "true")) {
-            Path kind = Paths.get("target", "kind", "kind");
+            String kindExe = SystemUtils.IS_OS_WINDOWS ? "kind.exe" : "kind";
+            Path kind = Paths.get("target", "kind", kindExe);
             if (Files.exists(kind) && Files.isRegularFile(kind) && Files.isExecutable(kind)) {
                 System.err.println("Using " + kind);
                 return kind.toString();

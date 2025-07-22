@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.SystemUtils;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -116,7 +117,8 @@ public class KubernetesTunnelRule implements TestRule {
     private String ktunnelCmd() {
         // in a CI environment use the binary downloaded by Maven.
         if (StringUtils.equalsIgnoreCase(System.getenv("CI"), "true")) {
-            Path ktunnel = Paths.get("target", "ktunnel", "ktunnel");
+            String ktunnelExe = SystemUtils.IS_OS_WINDOWS ? "ktunnel.exe" : "ktunnel";
+            Path ktunnel = Paths.get("target", "ktunnel", ktunnelExe);
             if (Files.exists(ktunnel) && Files.isRegularFile(ktunnel) && Files.isExecutable(ktunnel)) {
                 System.err.println("Using " + ktunnel);
                 return ktunnel.toString();
