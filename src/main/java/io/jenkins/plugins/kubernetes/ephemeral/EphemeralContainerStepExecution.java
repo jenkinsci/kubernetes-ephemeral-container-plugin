@@ -47,6 +47,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.metrics.api.Metrics;
 import jenkins.model.Jenkins;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.lang3.time.StopWatch;
@@ -196,7 +197,8 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
         KubernetesCloud cloud = slave.getKubernetesCloud();
 
         // Generate unique container name
-        String containerName = PodUtils.createNameWithRandomSuffix("jenkins-ephemeral");
+        String stepId = ObjectUtils.hashCodeHex(this.step);
+        String containerName = PodUtils.createNameWithRandomSuffix("jkns-step-" + stepId);
 
         // Create ephemeral container from container template
         EphemeralContainer ec = createEphemeralContainer(containerName, slave);
