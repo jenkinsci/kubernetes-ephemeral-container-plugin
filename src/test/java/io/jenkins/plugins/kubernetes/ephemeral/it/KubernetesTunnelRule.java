@@ -75,7 +75,7 @@ public class KubernetesTunnelRule implements TestRule {
         ProcessBuilder bldr = new ProcessBuilder(
                         ktunnelCmd(),
                         "expose",
-                        "--reuse",
+                        "--force",
                         "--namespace",
                         namespace,
                         tunnelHost,
