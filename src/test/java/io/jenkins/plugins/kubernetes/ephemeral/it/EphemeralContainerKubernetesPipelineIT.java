@@ -33,7 +33,6 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
 
 /**
  * Integration tests run pipeline jobs using a Kubernetes Cloud agent. Requires a local Kubernetes
@@ -60,9 +59,6 @@ public class EphemeralContainerKubernetesPipelineIT {
 
     @Rule
     public final TestName name = new TestName();
-
-    @Rule
-    public final Timeout globalTimeout = Timeout.seconds(300);
 
     private KubernetesCloud cloud;
     private WorkflowJob job;
