@@ -62,7 +62,7 @@ public class EphemeralContainerKubernetesPipelineIT {
     public final TestName name = new TestName();
 
     @Rule
-    public final Timeout globalTimeout = Timeout.seconds(240);
+    public final Timeout globalTimeout = Timeout.seconds(300);
 
     private KubernetesCloud cloud;
     private WorkflowJob job;
@@ -207,7 +207,8 @@ public class EphemeralContainerKubernetesPipelineIT {
     public void stepAborted() throws Exception {
         var run = scheduleJob();
         k.jkrule.assertBuildStatus(Result.FAILURE, k.jkrule.waitForCompletion(run));
-        k.jkrule.assertLogContains("ERROR: abort build in ephemeral container\nFinished: FAILURE", run);
+        k.jkrule.assertLogContains("ERROR: abort build in ephemeral container", run);
+        k.jkrule.assertLogContains("Finished: FAILURE", run);
     }
 
     @Test

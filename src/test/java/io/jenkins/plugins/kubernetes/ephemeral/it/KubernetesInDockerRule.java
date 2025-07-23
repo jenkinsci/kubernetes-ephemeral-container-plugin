@@ -45,7 +45,7 @@ public class KubernetesInDockerRule implements TestRule {
     private String createCluster() throws IOException, InterruptedException {
         String cluster = "ci" + RandomStringUtils.randomNumeric(5);
         Path kubeconfig = Paths.get("target", "kubeconfig-" + cluster).toAbsolutePath();
-        System.err.println("setting KUBECONFIG=" + kubeconfig);
+        System.out.println("setting KUBECONFIG=" + kubeconfig);
         // system property used by fabric8 client
         // https://github.com/fabric8io/kubernetes-client?tab=readme-ov-file#configuring-the-client
         System.setProperty("kubeconfig", kubeconfig.toString());
