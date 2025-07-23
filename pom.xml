@@ -195,6 +195,21 @@
       </properties>
     </profile>
     <profile>
+      <id>linux-arm64</id>
+      <activation>
+        <os>
+          <family>unix</family>
+          <arch>aarch64</arch>
+        </os>
+      </activation>
+      <properties>
+        <kind.os>linux</kind.os>
+        <kind.arch>arm64</kind.arch>
+        <ktunnel.os>Linux</ktunnel.os>
+        <ktunnel.arch>arm64</ktunnel.arch>
+      </properties>
+    </profile>
+    <profile>
       <id>mac-arm64</id>
       <activation>
         <os>
