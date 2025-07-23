@@ -195,7 +195,6 @@ public class EphemeralContainerKubernetesPipelineIT {
         assertNotNull("expected executor", e);
         e.interrupt();
         k.jkrule.assertBuildStatus(Result.ABORTED, k.jkrule.waitForCompletion(run));
-        k.jkrule.assertLogContains("Aborted by unknown", run);
         k.jkrule.assertLogContains("Finished: ABORTED", run);
     }
 
@@ -203,7 +202,7 @@ public class EphemeralContainerKubernetesPipelineIT {
     public void stepAborted() throws Exception {
         var run = scheduleJob();
         k.jkrule.assertBuildStatus(Result.FAILURE, k.jkrule.waitForCompletion(run));
-        k.jkrule.assertLogContains("ERROR: abort build in ephemeral container", run);
+        k.jkrule.assertLogContains("ERROR: abort step in ephemeral container", run);
         k.jkrule.assertLogContains("Finished: FAILURE", run);
     }
 

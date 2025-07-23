@@ -6,7 +6,7 @@ pipeline {
         stage('node version') {
             steps {
                 withEphemeralContainer(image: 'node:22-alpine') {
-                    error 'abort build in ephemeral container'
+                    error 'abort step in ephemeral container'
                 }
             }
         }
