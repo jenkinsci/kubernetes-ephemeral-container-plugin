@@ -15,31 +15,24 @@ import org.jvnet.hudson.test.JenkinsRule;
  * Test rule that starts Jenkins and creates a tunnel to the provided Kubernetes namespace.
  *
  * @see JenkinsRule
- * @see KubernetesTunnelRule
  */
 public class KubernetesJenkinsRule implements TestRule {
 
     public final JenkinsRule jkrule;
-    private final KubernetesTunnelRule tunnelRule;
     private final String namespace;
 
     public KubernetesJenkinsRule(String namespace) {
         this.jkrule = new JenkinsRule();
-        this.tunnelRule = new KubernetesTunnelRule(jkrule, namespace);
         this.namespace = namespace;
     }
 
     @Override
     public Statement apply(Statement base, Description description) {
-        return new RunRules(base, List.of(tunnelRule, jkrule), description);
+        return new RunRules(base, List.of(jkrule), description);
     }
 
     public Jenkins getJenkins() {
         return jkrule.jenkins;
-    }
-
-    public String getJenkinsTunnelUrl() {
-        return tunnelRule.getJenkinsTunnelUrl();
     }
 
     public void evictAgentPod(TestName name) {

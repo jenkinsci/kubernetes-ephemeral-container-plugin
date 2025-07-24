@@ -54,6 +54,9 @@ public class EphemeralContainerKubernetesPipelineIT {
     @ClassRule(order = 1)
     public static KubernetesNamespaceRule namespaceRule = new KubernetesNamespaceRule(testingNamespace);
 
+    @ClassRule(order = 2)
+    public static KubernetesTunnelRule tunnelRule = new KubernetesTunnelRule(testingNamespace);
+
     @Rule
     public final KubernetesJenkinsRule k = new KubernetesJenkinsRule(testingNamespace);
 
@@ -75,7 +78,7 @@ public class EphemeralContainerKubernetesPipelineIT {
         cloud.setNamespace(testingNamespace);
         cloud.addTemplate(buildBusyboxTemplate("busybox"));
 
-        String tunnelUrl = k.getJenkinsTunnelUrl();
+        String tunnelUrl = tunnelRule.getJenkinsTunnelUrl();
         cloud.setJenkinsUrl(tunnelUrl);
         cloud.setWebSocket(true);
 

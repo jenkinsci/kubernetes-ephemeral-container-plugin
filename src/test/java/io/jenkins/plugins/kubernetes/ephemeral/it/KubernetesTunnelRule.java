@@ -17,7 +17,6 @@ import org.apache.commons.lang3.SystemUtils;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
-import org.jvnet.hudson.test.JenkinsRule;
 
 /**
  * Test rule that exposes from the provided Kubernetes cluster namespace to
@@ -25,17 +24,14 @@ import org.jvnet.hudson.test.JenkinsRule;
  * using the <a href="https://github.com/omrikiei/ktunnel">ktunnel</a> command.
  *
  * @see #ktunnelCmd()
- * @see JenkinsRule
  */
 public class KubernetesTunnelRule implements TestRule {
 
-    private final JenkinsRule jenkins;
     private final String namespace;
     private Process tunnel;
     private String tunnelUrl;
 
-    public KubernetesTunnelRule(@NonNull JenkinsRule jenkins, @NonNull String namespace) {
-        this.jenkins = jenkins;
+    public KubernetesTunnelRule(@NonNull String namespace) {
         this.namespace = namespace;
     }
 
@@ -66,16 +62,23 @@ public class KubernetesTunnelRule implements TestRule {
         }
     }
 
+    private int getOrSetSystemProperty(String name, int defaultVal) {
+        String v = System.getProperty(name);
+        if (v == null) {
+            System.setProperty(name, Integer.toString(defaultVal));
+        }
+
+        return Integer.getInteger(name);
+    }
+
     private void startTunnel() throws IOException, InterruptedException {
-        URL jenkinsUrl = jenkins.getURL();
-        int jenkinsPort = jenkinsUrl.getPort();
-        int slaveAgentPort = jenkins.jenkins.tcpSlaveAgentListener.getPort();
+        int jenkinsPort = getOrSetSystemProperty("port", 8000);
+        int slaveAgentPort = getOrSetSystemProperty("jenkins.model.Jenkins.slaveAgentPort", 8001);
         String tunnelHost = "jenkins";
-        tunnelUrl = new URL(jenkinsUrl.getProtocol(), tunnelHost, jenkinsPort, jenkinsUrl.getFile()).toString();
+        tunnelUrl = new URL("http", tunnelHost, jenkinsPort, "/jenkins").toString();
         ProcessBuilder bldr = new ProcessBuilder(
                         ktunnelCmd(),
                         "expose",
-                        "--force",
                         "--namespace",
                         namespace,
                         tunnelHost,
