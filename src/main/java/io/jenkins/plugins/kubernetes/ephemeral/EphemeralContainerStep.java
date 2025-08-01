@@ -111,7 +111,7 @@ public class EphemeralContainerStep extends Step implements Serializable {
 
     @CheckForNull
     public Long getRunAsUserLong() {
-        return NumberUtils.createLong(runAsUser);
+        return parseLong(runAsUser);
     }
 
     @DataBoundSetter
@@ -126,12 +126,22 @@ public class EphemeralContainerStep extends Step implements Serializable {
 
     @CheckForNull
     public Long getRunAsGroupLong() {
-        return NumberUtils.createLong(runAsGroup);
+        return parseLong(runAsGroup);
     }
 
     @DataBoundSetter
     public void setRunAsGroup(@CheckForNull String runAsGroup) {
         this.runAsGroup = Util.fixEmpty(runAsGroup);
+    }
+
+    @CheckForNull
+    private static Long parseLong(@CheckForNull String value) {
+        value = Util.fixEmptyAndTrim(value);
+        try {
+            return value == null ? null : NumberUtils.createLong(value);
+        } catch (NumberFormatException nfe) {
+            return null;
+        }
     }
 
     @CheckForNull

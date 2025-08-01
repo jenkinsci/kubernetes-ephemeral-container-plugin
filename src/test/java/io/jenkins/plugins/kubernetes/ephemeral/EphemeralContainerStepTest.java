@@ -52,4 +52,20 @@ class EphemeralContainerStepTest {
         EphemeralContainerStep.DescriptorImpl descriptor = new EphemeralContainerStep.DescriptorImpl();
         assertEquals(expected, descriptor.doCheckTargetContainer(input).kind);
     }
+
+    @ParameterizedTest
+    @CsvSource({
+        ",",
+        "'',",
+        "' ',",
+        "foo,",
+        "1000, 1000",
+    })
+    void testRunAsUserGroupToLong(String input, Long expected) {
+        EphemeralContainerStep step = new EphemeralContainerStep("maven");
+        step.setRunAsGroup(input);
+        step.setRunAsUser(input);
+        assertEquals(expected, step.getRunAsGroupLong());
+        assertEquals(expected, step.getRunAsUserLong());
+    }
 }
