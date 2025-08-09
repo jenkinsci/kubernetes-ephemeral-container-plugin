@@ -53,6 +53,40 @@ pipeline {
 }
 ```
 
+The [Kubernetes Cloud](https://plugins.jenkins.io/kubernetes/) service account role must have the `pod/ephemeralcontainers` 
+permission.
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jenkins-agent
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - events
+      - pods/logs
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - pods/exec
+      - pods/ephemeralcontainers
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+```
+
 ## Limitations
 
 The Ephemeral Container spec does not allow for specifying resources, but will still be subject to the
