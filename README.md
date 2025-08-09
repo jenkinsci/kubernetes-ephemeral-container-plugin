@@ -67,7 +67,33 @@ it is not recommended to re-use agents node for multiple builds. Setting the Pod
 ("Time in minutes to retain agent when idle") to `0` is a good practice.**
 
 - Windows containers are not supported
-- Must have a shell available
+- Container must have a shell available
+
+## Best Practices
+
+- Set the Pod Template idle minutes property ("Time in minutes to retain agent when idle") to `0`. This prevents Pod
+  spec container accumulation across builds which could lead to Pod spec size limits.
+- Do not loop over `withEphemeralContainer`
+  ```groovy
+  // Bad - Could trigger Pod spec size limits
+  for (def file in files) {
+    withEphemeralContainer("koalaman/shellcheck") {
+      sh "shellcheck ${file}"
+    }
+  }
+  
+  // Better - Move the loop inside the container block
+  withEphemeralContainer("koalaman/shellcheck") {
+    for (def file in files) {
+      sh "shellcheck ${file}"
+    }
+  }
+  
+  // Best - Execute a single shell command in the container
+  withEphemeralContainer("koalaman/shellcheck") {
+    sh "shellcheck ${files.join(' ')}"
+  }
+  ```
 
 ## Container Entrypoints
 
