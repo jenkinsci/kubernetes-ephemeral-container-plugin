@@ -15,6 +15,7 @@ that gap.
 
 - [Getting Started](#getting-started)
 - [Limitations](#limitations)
+- [Best Practices](#best-practices)
 - [Container Entrypoints](#container-entrypoints)
 - [Environment Variables](#environment-variables)
 - [Nested Ephemeral Container Steps](#nested-ephemeral-container-steps)
@@ -199,12 +200,21 @@ Use wildcard patterns to with either allow or reject specific images or registri
 For clusters with high load or pipelines with lots of concurrency the following system property settings may be tweaked
 to improve container creation reliability.
 
-| Property                                                                                        | Default | Description                                                                                                                         |
-|-------------------------------------------------------------------------------------------------|---------|-------------------------------------------------------------------------------------------------------------------------------------|
-| `io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStepExecution.startMaxRetry`         | `3`     | Number of retry attempts if container fails to start due to context deadline miss. May be increased for clusters with kubelet load. |
-| `io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStepExecution.startRetryMaxWaitSecs` | `2`     | Max wait time between retries. Used to spread kubelet load.                                                                         |
-| `io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStepExecution.pathMaxRetry`          | `10`    | Number of retry attempts to patch Pod spec. May be increased for highly concurrent pipelines create a lot patch conflicts.          |
-| `io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStepExecution.patchRetryMaxWaitSecs` | `2`     | Max wait time between retries. Used to minimize patch conflicts.                                                                    |
+`io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStepExecution.startMaxRetry`
+:  Number of retry attempts if container fails to start due to context deadline miss. May be increased for clusters with kubelet load.
+: Default: `3`
+
+`io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStepExecution.startRetryMaxWaitSecs`
+: Max wait time between retries. Used to spread kubelet load.
+: Default: `2`
+
+`io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStepExecution.pathMaxRetry`
+: Number of retry attempts to patch Pod spec. May be increased for highly concurrent pipelines create a lot patch conflicts.
+: Default: `10`
+
+`io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStepExecution.patchRetryMaxWaitSecs`
+: Max wait time between retries. Used to minimize patch conflicts.
+: Default: `2`
 
 ## Metrics
 
