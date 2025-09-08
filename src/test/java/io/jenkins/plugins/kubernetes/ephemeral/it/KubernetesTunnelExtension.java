@@ -1,6 +1,6 @@
 package io.jenkins.plugins.kubernetes.ephemeral.it;
 
-import static org.junit.Assume.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -13,65 +13,31 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.commons.lang3.SystemUtils;
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
- * Test rule that exposes from the provided Kubernetes cluster namespace to
+ * Test extension that exposes from the provided Kubernetes cluster namespace to
  * ths test Jenkins instance running outside the cluster. This tunnel is created
  * using the <a href="https://github.com/omrikiei/ktunnel">ktunnel</a> command.
  *
  * @see #ktunnelCmd()
  */
-public class KubernetesTunnelRule implements TestRule {
+public class KubernetesTunnelExtension implements BeforeAllCallback, AfterAllCallback {
 
     private final String namespace;
     private Process tunnel;
     private String tunnelUrl;
 
-    public KubernetesTunnelRule(@NonNull String namespace) {
+    public KubernetesTunnelExtension(@NonNull String namespace) {
         this.namespace = namespace;
     }
 
     @Override
-    public Statement apply(Statement base, Description description) {
-        return new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                start();
-                try {
-                    base.evaluate();
-                } finally {
-                    stop();
-                }
-            }
-        };
-    }
-
-    public void start() throws IOException, InterruptedException {
-        if (tunnel == null || !tunnel.isAlive()) {
-            startTunnel();
-        }
-    }
-
-    public void stop() {
-        if (tunnel.isAlive()) {
-            tunnel.destroy();
-        }
-    }
-
-    private int getOrSetSystemProperty(String name, int defaultVal) {
-        String v = System.getProperty(name);
-        if (v == null) {
-            System.setProperty(name, Integer.toString(defaultVal));
-        }
-
-        return Integer.getInteger(name);
-    }
-
-    private void startTunnel() throws IOException, InterruptedException {
+    public void beforeAll(ExtensionContext context) throws Exception {
         int jenkinsPort = getOrSetSystemProperty("port", 8000);
         int slaveAgentPort = getOrSetSystemProperty("jenkins.model.Jenkins.slaveAgentPort", 8001);
         String tunnelHost = "jenkins";
@@ -96,7 +62,7 @@ public class KubernetesTunnelRule implements TestRule {
         try {
             tunnel = bldr.start();
         } catch (IOException ioe) {
-            assumeNoException("ktunnel not available", ioe);
+            assumeTrue(false, "ktunnel not available " + ioe);
         }
 
         Thread.sleep(2000);
@@ -113,6 +79,22 @@ public class KubernetesTunnelRule implements TestRule {
         }
     }
 
+    @Override
+    public void afterAll(ExtensionContext context) {
+        if (tunnel != null && tunnel.isAlive()) {
+            tunnel.destroy();
+        }
+    }
+
+    private int getOrSetSystemProperty(String name, int defaultVal) {
+        String v = System.getProperty(name);
+        if (v == null) {
+            System.setProperty(name, Integer.toString(defaultVal));
+        }
+
+        return Integer.getInteger(name);
+    }
+
     /**
      * Get the ktunnel command to execute. When in CI environment look for downloaded binary
      * in target directory (via maven wget goal), otherwise use the system path.
@@ -120,7 +102,7 @@ public class KubernetesTunnelRule implements TestRule {
      */
     private String ktunnelCmd() {
         // in a CI environment use the binary downloaded by Maven.
-        if (StringUtils.equalsIgnoreCase(System.getenv("CI"), "true")) {
+        if (Strings.CI.equals(System.getenv("CI"), "true")) {
             String ktunnelExe = SystemUtils.IS_OS_WINDOWS ? "ktunnel.exe" : "ktunnel";
             Path ktunnel = Paths.get("target", "ktunnel", ktunnelExe);
             if (Files.exists(ktunnel) && Files.isRegularFile(ktunnel) && Files.isExecutable(ktunnel)) {

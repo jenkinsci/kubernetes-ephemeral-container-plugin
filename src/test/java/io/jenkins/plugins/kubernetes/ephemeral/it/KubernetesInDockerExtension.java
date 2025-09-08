@@ -1,49 +1,44 @@
 package io.jenkins.plugins.kubernetes.ephemeral.it;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeNoException;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+import org.apache.commons.lang3.Strings;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
- * Test rule that creates a new <a href="https://kind.sigs.k8s.io/">kind</a> cluster for CI testing environments.
+ * Test extension that creates a new <a href="https://kind.sigs.k8s.io/">kind</a> cluster for CI testing environments.
  * @see #kindCmd()
  */
-public class KubernetesInDockerRule implements TestRule {
+class KubernetesInDockerExtension implements BeforeAllCallback, AfterAllCallback {
+
+    private String cluster;
 
     @Override
-    public Statement apply(Statement base, Description description) {
-        return new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                String cluster = null;
-                if (StringUtils.equalsIgnoreCase(System.getenv("CI"), "true")) {
-                    cluster = createCluster();
-                } else {
-                    System.err.println("Using local Kubernetes cluster");
-                }
-
-                try {
-                    base.evaluate();
-                } finally {
-                    if (cluster != null) {
-                        deleteCluster(cluster);
-                    }
-                }
-            }
-        };
+    public void beforeAll(ExtensionContext context) throws Exception {
+        if (Strings.CI.equals(System.getenv("CI"), "true")) {
+            cluster = createCluster();
+        } else {
+            System.err.println("Using local Kubernetes cluster");
+        }
     }
 
-    private String createCluster() throws IOException, InterruptedException {
-        String cluster = "ci" + RandomStringUtils.randomNumeric(5);
+    @Override
+    public void afterAll(ExtensionContext context) throws Exception {
+        if (cluster != null) {
+            deleteCluster(cluster);
+        }
+    }
+
+    private String createCluster() throws InterruptedException {
+        String cluster = "ci" + RandomStringUtils.insecure().nextNumeric(5);
         Path kubeconfig = Paths.get("target", "kubeconfig-" + cluster).toAbsolutePath();
         System.out.println("setting KUBECONFIG=" + kubeconfig);
         // system property used by fabric8 client
@@ -54,9 +49,9 @@ public class KubernetesInDockerRule implements TestRule {
         bldr.environment().put("KUBECONFIG", kubeconfig.toString());
         try {
             int code = bldr.start().waitFor();
-            assertEquals("kind cluster not created successfully", 0, code);
+            assertEquals(0, code, "kind cluster not created successfully");
         } catch (IOException ioe) {
-            assumeNoException(ioe);
+            assumeTrue(false, ioe.toString());
         }
 
         System.err.println("kind cluster " + cluster + " created");
@@ -80,7 +75,7 @@ public class KubernetesInDockerRule implements TestRule {
      */
     private String kindCmd() {
         // in a CI environment use the binary downloaded by Maven.
-        if (StringUtils.equalsIgnoreCase(System.getenv("CI"), "true")) {
+        if (Strings.CI.equals(System.getenv("CI"), "true")) {
             Path kind = Paths.get("target", "kind", "kind");
             if (Files.exists(kind)) {
                 System.err.println("Using " + kind);

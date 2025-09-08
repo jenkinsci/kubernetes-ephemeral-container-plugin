@@ -1,11 +1,13 @@
 package io.jenkins.plugins.kubernetes.ephemeral.it;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import hudson.model.Executor;
 import hudson.model.Result;
 import hudson.model.queue.QueueTaskFuture;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerGlobalConfiguration;
 import io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerKubernetesCloudTrait;
 import io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStepRule;
@@ -28,71 +30,76 @@ import org.jenkinsci.plugins.workflow.flow.GlobalDefaultFlowDurabilityLevel;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Integration tests run pipeline jobs using a Kubernetes Cloud agent. Requires a local Kubernetes
  * cluster and the ktunnel command available. In a CI environment, maven will download kind and
  * ktunnel to satisfy these requirements.
  *
- * @see KubernetesInDockerRule
- * @see KubernetesTunnelRule
- * @see KubernetesNamespaceRule
- * @see KubernetesJenkinsRule
+ * @see KubernetesInDockerExtension
+ * @see KubernetesTunnelExtension
+ * @see KubernetesNamespaceExtension
  */
-public class EphemeralContainerKubernetesPipelineIT {
+@WithJenkins
+class EphemeralContainerKubernetesPipelineIT {
 
-    private static final String testingNamespace = "kubernetes-ephemeral-container-plugin";
+    private static final String TESTING_NAMESPACE = "kubernetes-ephemeral-container-plugin";
 
-    @ClassRule(order = 0)
-    public static KubernetesInDockerRule kindRule = new KubernetesInDockerRule();
+    @SuppressWarnings("unused")
+    @RegisterExtension
+    @Order(0)
+    private static final KubernetesInDockerExtension KIND_EXTENSION = new KubernetesInDockerExtension();
 
-    @ClassRule(order = 1)
-    public static KubernetesNamespaceRule namespaceRule = new KubernetesNamespaceRule(testingNamespace);
+    @SuppressWarnings("unused")
+    @RegisterExtension
+    @Order(1)
+    private static final KubernetesNamespaceExtension NAMESPACE_EXTENSION =
+            new KubernetesNamespaceExtension(TESTING_NAMESPACE);
 
-    @ClassRule(order = 2)
-    public static KubernetesTunnelRule tunnelRule = new KubernetesTunnelRule(testingNamespace);
+    @RegisterExtension
+    @Order(2)
+    private static final KubernetesTunnelExtension TUNNEL_EXTENSION = new KubernetesTunnelExtension(TESTING_NAMESPACE);
 
-    @Rule
-    public final KubernetesJenkinsRule k = new KubernetesJenkinsRule(testingNamespace);
+    private JenkinsRule j;
 
-    @Rule
-    public final TestName name = new TestName();
+    private String name;
 
     private KubernetesCloud cloud;
     private WorkflowJob job;
 
-    @Before
-    public void setupCloud() throws IOException {
+    @BeforeEach
+    void beforeEach(TestInfo info, JenkinsRule rule) throws Exception {
+        j = rule;
+        name = info.getTestMethod().orElseThrow().getName();
         cloud = new KubernetesCloud("kubernetes");
         cloud.setPodLabels(List.of(
                 new PodLabel("build-number", PodUtils.generateRandomSuffix()),
                 new PodLabel("test-class", getClass().getSimpleName()),
-                new PodLabel("test-method", name.getMethodName())));
+                new PodLabel("test-method", name)));
         cloud.setTraits(List.of(new EphemeralContainerKubernetesCloudTrait()));
 
-        cloud.setNamespace(testingNamespace);
+        cloud.setNamespace(TESTING_NAMESPACE);
         cloud.addTemplate(buildBusyboxTemplate("busybox"));
 
-        String tunnelUrl = tunnelRule.getJenkinsTunnelUrl();
+        String tunnelUrl = TUNNEL_EXTENSION.getJenkinsTunnelUrl();
         cloud.setJenkinsUrl(tunnelUrl);
         cloud.setWebSocket(true);
 
-        k.getJenkins().clouds.add(cloud);
-        k.getJenkins().save();
-    }
+        j.jenkins.clouds.add(cloud);
+        j.jenkins.save();
 
-    @Before
-    public void setupTest() throws Exception {
         // Had some problems with FileChannel.close hangs from WorkflowRun.save:
-        k.getJenkins()
+        j.jenkins
                 .getDescriptorByType(GlobalDefaultFlowDurabilityLevel.DescriptorImpl.class)
                 .setDurabilityHint(FlowDurabilityHint.PERFORMANCE_OPTIMIZED);
-        job = createJob(name.getMethodName());
+        job = createJob(name);
         job.setDefinition(new CpsFlowDefinition(loadPipelineDefinition(), true));
     }
 
@@ -101,9 +108,9 @@ public class EphemeralContainerKubernetesPipelineIT {
     }
 
     private WorkflowJob createJob(String name) throws Exception {
-        WorkflowJob j = k.getJenkins().createProject(WorkflowJob.class, generateProjectName(name));
-        j.setDefinition(new CpsFlowDefinition(loadPipelineDefinition(), true));
-        return j;
+        WorkflowJob job = j.jenkins.createProject(WorkflowJob.class, generateProjectName(name));
+        job.setDefinition(new CpsFlowDefinition(loadPipelineDefinition(), true));
+        return job;
     }
 
     private WorkflowRun scheduleJob() throws ExecutionException, InterruptedException {
@@ -114,14 +121,29 @@ public class EphemeralContainerKubernetesPipelineIT {
     }
 
     private WorkflowRun scheduleJobAndWaitComplete() throws ExecutionException, InterruptedException {
-        return k.jkrule.waitForCompletion(scheduleJob());
+        return j.waitForCompletion(scheduleJob());
     }
 
     private String loadPipelineDefinition() throws IOException {
-        String scriptFile = name.getMethodName() + ".groovy";
+        String scriptFile = name + ".groovy";
         try (InputStream in = EphemeralContainerKubernetesPipelineIT.class.getResourceAsStream(scriptFile)) {
-            assumeTrue(scriptFile + " not found", in != null);
+            assumeTrue(in != null, scriptFile + " not found");
             return IOUtils.toString(in, StandardCharsets.UTF_8);
+        }
+    }
+
+    private void evictAgentPod() {
+        System.err.println("Evicting agent pods");
+        try (KubernetesClient client = new KubernetesClientBuilder().build()) {
+            client.pods()
+                    .inNamespace(TESTING_NAMESPACE)
+                    .withLabel("test-method", name)
+                    .resources()
+                    .forEach(r -> {
+                        System.err.println(
+                                "Evicting pod " + r.get().getMetadata().getName());
+                        r.evict();
+                    });
         }
     }
 
@@ -134,107 +156,107 @@ public class EphemeralContainerKubernetesPipelineIT {
     }
 
     @Test
-    public void ephemeralContainerEnabled() throws Exception {
+    void ephemeralContainerEnabled() throws Exception {
         var run = scheduleJobAndWaitComplete();
-        k.jkrule.assertBuildStatusSuccess(run);
-        k.jkrule.assertLogContains("KUBERNETES_CLOUD_EPHEMERAL_CONTAINERS_ENABLED=true", run);
-        k.jkrule.assertLogContains("+ node --version\nv22", run);
-        k.jkrule.assertLogContains("+ echo 'alternate step name'", run);
+        j.assertBuildStatusSuccess(run);
+        j.assertLogContains("KUBERNETES_CLOUD_EPHEMERAL_CONTAINERS_ENABLED=true", run);
+        j.assertLogContains("+ node --version\nv22", run);
+        j.assertLogContains("+ echo 'alternate step name'", run);
     }
 
     @Test
-    public void ephemeralContainerNotEnabled() throws Exception {
+    void ephemeralContainerNotEnabled() throws Exception {
         cloud.setTraits(null);
         var run = scheduleJobAndWaitComplete();
-        k.jkrule.assertBuildStatus(Result.FAILURE, run);
-        k.jkrule.assertLogContains("KUBERNETES_CLOUD_EPHEMERAL_CONTAINERS_ENABLED=false", run);
-        k.jkrule.assertLogContains("ERROR: Ephemeral containers not enabled on kubernetes", run);
+        j.assertBuildStatus(Result.FAILURE, run);
+        j.assertLogContains("KUBERNETES_CLOUD_EPHEMERAL_CONTAINERS_ENABLED=false", run);
+        j.assertLogContains("ERROR: Ephemeral containers not enabled on kubernetes", run);
     }
 
     @Test
-    public void imageNotAllowedByCloudTrait() throws Exception {
+    void imageNotAllowedByCloudTrait() throws Exception {
         Optional<EphemeralContainerKubernetesCloudTrait> trait =
                 cloud.getTrait(EphemeralContainerKubernetesCloudTrait.class);
         trait.ifPresent(t -> t.setContainerStepRules(
                 List.of(new ContainerImageRule("*/node", EphemeralContainerStepRule.Action.REJECT))));
         var run = scheduleJobAndWaitComplete();
-        k.jkrule.assertBuildStatus(Result.FAILURE, run);
-        k.jkrule.assertLogContains("ERROR: Image 'node:22-alpine' has been disallowed by Jenkins administrators.", run);
+        j.assertBuildStatus(Result.FAILURE, run);
+        j.assertLogContains("ERROR: Image 'node:22-alpine' has been disallowed by Jenkins administrators.", run);
     }
 
     @Test
-    public void imageNotAllowedByGlobalConfig() throws Exception {
+    void imageNotAllowedByGlobalConfig() throws Exception {
         EphemeralContainerGlobalConfiguration config = EphemeralContainerGlobalConfiguration.get();
         config.setContainerStepRules(
                 List.of(new ContainerImageRule("*/node", EphemeralContainerStepRule.Action.REJECT)));
         var run = scheduleJobAndWaitComplete();
-        k.jkrule.assertBuildStatus(Result.FAILURE, run);
-        k.jkrule.assertLogContains("ERROR: Image 'node:22-alpine' has been disallowed by Jenkins administrators.", run);
+        j.assertBuildStatus(Result.FAILURE, run);
+        j.assertLogContains("ERROR: Image 'node:22-alpine' has been disallowed by Jenkins administrators.", run);
     }
 
     @Test
-    public void ephemeralContainerEnvVars() throws Exception {
+    void ephemeralContainerEnvVars() throws Exception {
         var run = scheduleJobAndWaitComplete();
-        k.jkrule.assertBuildStatusSuccess(run);
-        k.jkrule.assertLogContains("+ echo 'foo=baz'", run);
-        k.jkrule.assertLogContains("+ echo 'bar=bats'", run);
+        j.assertBuildStatusSuccess(run);
+        j.assertLogContains("+ echo 'foo=baz'", run);
+        j.assertLogContains("+ echo 'bar=bats'", run);
     }
 
     @Test
-    public void sharedWorkingDir() throws Exception {
+    void sharedWorkingDir() throws Exception {
         var run = scheduleJobAndWaitComplete();
-        k.jkrule.assertBuildStatusSuccess(run);
-        k.jkrule.assertLogContains("+ cat foo.txt\nfoo\n[Pipeline]", run);
-        k.jkrule.assertLogContains("+ cat foo.txt\nfoo\nbar", run);
-        k.jkrule.assertLogContains("+ cat dogs.txt\nsnoopy", run);
+        j.assertBuildStatusSuccess(run);
+        j.assertLogContains("+ cat foo.txt\nfoo\n[Pipeline]", run);
+        j.assertLogContains("+ cat foo.txt\nfoo\nbar", run);
+        j.assertLogContains("+ cat dogs.txt\nsnoopy", run);
     }
 
     @Test
-    public void buildAborted() throws Exception {
+    void buildAborted() throws Exception {
         var run = scheduleJob();
         assertNotNull(run);
         SemaphoreStep.waitForStart("ephemeralContainer/1", run);
         Executor e = run.getExecutor();
-        assertNotNull("expected executor", e);
+        assertNotNull(e, "expected executor");
         e.interrupt();
-        k.jkrule.assertBuildStatus(Result.ABORTED, k.jkrule.waitForCompletion(run));
-        k.jkrule.assertLogContains("Finished: ABORTED", run);
+        j.assertBuildStatus(Result.ABORTED, j.waitForCompletion(run));
+        j.assertLogContains("Finished: ABORTED", run);
     }
 
     @Test
-    public void stepAborted() throws Exception {
+    void stepAborted() throws Exception {
         var run = scheduleJob();
-        k.jkrule.assertBuildStatus(Result.FAILURE, k.jkrule.waitForCompletion(run));
-        k.jkrule.assertLogContains("ERROR: abort step in ephemeral container", run);
-        k.jkrule.assertLogContains("Finished: FAILURE", run);
+        j.assertBuildStatus(Result.FAILURE, j.waitForCompletion(run));
+        j.assertLogContains("ERROR: abort step in ephemeral container", run);
+        j.assertLogContains("Finished: FAILURE", run);
     }
 
     @Test
-    public void podTerminated() throws Exception {
+    void podTerminated() throws Exception {
         var run = scheduleJob();
         assertNotNull(run);
         SemaphoreStep.waitForStart("ephemeralContainer/1", run);
-        k.evictAgentPod(name);
-        k.jkrule.assertBuildStatus(Result.ABORTED, k.jkrule.waitForCompletion(run));
-        k.jkrule.assertLogContains("Agent was removed", run);
-        k.jkrule.assertLogContains("Finished: ABORTED", run);
+        evictAgentPod();
+        j.assertBuildStatus(Result.ABORTED, j.waitForCompletion(run));
+        j.assertLogContains("Agent was removed", run);
+        j.assertLogContains("Finished: ABORTED", run);
     }
 
     @Test
-    public void timeoutInterrupt() throws Exception {
+    void timeoutInterrupt() throws Exception {
         var run = scheduleJob();
         assertNotNull(run);
-        k.jkrule.assertBuildStatus(Result.ABORTED, k.jkrule.waitForCompletion(run));
-        k.jkrule.assertLogContains("Timeout has been exceeded", run);
-        k.jkrule.assertLogContains("Finished: ABORTED", run);
+        j.assertBuildStatus(Result.ABORTED, j.waitForCompletion(run));
+        j.assertLogContains("Timeout has been exceeded", run);
+        j.assertLogContains("Finished: ABORTED", run);
     }
 
     @Test
-    public void nestedContainersRedis() throws Exception {
+    void nestedContainersRedis() throws Exception {
         var run = scheduleJob();
         assertNotNull(run);
-        k.jkrule.assertBuildStatus(Result.SUCCESS, k.jkrule.waitForCompletion(run));
-        k.jkrule.assertLogContains("+ redis-cli ping\nPONG", run);
-        k.jkrule.assertLogContains("Finished: SUCCESS", run);
+        j.assertBuildStatus(Result.SUCCESS, j.waitForCompletion(run));
+        j.assertLogContains("+ redis-cli ping\nPONG", run);
+        j.assertLogContains("Finished: SUCCESS", run);
     }
 }
