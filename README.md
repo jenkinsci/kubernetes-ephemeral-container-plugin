@@ -53,7 +53,7 @@ pipeline {
 }
 ```
 
-The [Kubernetes Cloud](https://plugins.jenkins.io/kubernetes/) service account role must have the `pod/ephemeralcontainers` 
+The [Kubernetes Cloud](https://plugins.jenkins.io/kubernetes/) service account role must have the `pods/ephemeralcontainers` 
 permission.
 
 ```yaml
