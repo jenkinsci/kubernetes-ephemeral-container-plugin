@@ -168,9 +168,7 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
                     if (listener != null
                             && StringUtils.contains(e.getState().getMessage(), "failed to create shim task: context")) {
                         // Attempt to explain common reasons why the container might not have started.
-                        listener.getLogger()
-                                .println(
-                                        """
+                        listener.getLogger().println("""
                                                 Based on the container termination message there are several reasons that could have caused the failure:
                                                   Resource Constraints:
                                                     - Insufficient memory or CPU resources
