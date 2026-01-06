@@ -89,6 +89,8 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
     private static final int START_RETRY_MAX_WAIT =
             Integer.getInteger(EphemeralContainerStepExecution.class.getName() + ".startRetryMaxWaitSecs", 2);
     private static final Set<String> START_RETRY_REASONS = Collections.singleton("StartError");
+    private static final int WHOAMI_TIMEOUT =
+            Integer.getInteger(EphemeralContainerStepExecution.class.getName() + ".whoamiTimeoutSecs", 180);
 
     @SuppressFBWarnings(value = "SE_TRANSIENT_FIELD_NOT_RESTORED", justification = "not needed on deserialization")
     private final transient EphemeralContainerStep step;
@@ -441,7 +443,7 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
                     .quiet(true)
                     .stdout(userId)
                     .start()
-                    .joinWithTimeout(60, TimeUnit.SECONDS, launcher.getListener());
+                    .joinWithTimeout(WHOAMI_TIMEOUT, TimeUnit.SECONDS, launcher.getListener());
 
             ByteArrayOutputStream groupId = new ByteArrayOutputStream();
             launcher.launch()
@@ -449,7 +451,7 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
                     .quiet(true)
                     .stdout(groupId)
                     .start()
-                    .joinWithTimeout(60, TimeUnit.SECONDS, launcher.getListener());
+                    .joinWithTimeout(WHOAMI_TIMEOUT, TimeUnit.SECONDS, launcher.getListener());
 
             final Charset charset = Charset.defaultCharset();
             sc.setRunAsUser(NumberUtils.createLong(userId.toString(charset).trim()));
