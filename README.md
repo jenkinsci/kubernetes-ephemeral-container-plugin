@@ -246,6 +246,9 @@ to improve container creation reliability.
 - `io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStepExecution.patchRetryMaxWaitSecs`
   > Max wait time between retries. Used to minimize patch conflicts.
   > > Default: `2`
+- `io.jenkins.plugins.kubernetes.ephemeral.EphemeralContainerStepExecution.whoamiTimeoutSecs`
+  > Client timeout for running commands to determine the user and group id when not specified by the template.
+  > > Default: `180`
 
 ## Metrics
 
