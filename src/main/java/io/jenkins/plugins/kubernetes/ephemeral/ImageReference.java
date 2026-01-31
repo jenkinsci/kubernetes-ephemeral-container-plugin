@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 
 /**
  * Container image reference. Image references parsed by this class are always normalized:
@@ -63,7 +64,7 @@ public class ImageReference {
 
             String name = matcher.group("Repo");
             String namespace = matcher.group("Namespace");
-            if (StringUtils.isEmpty(namespace) && StringUtils.equals(domain, "docker.io")) {
+            if (StringUtils.isEmpty(namespace) && Strings.CS.equals(domain, "docker.io")) {
                 namespace = "library/";
             }
 

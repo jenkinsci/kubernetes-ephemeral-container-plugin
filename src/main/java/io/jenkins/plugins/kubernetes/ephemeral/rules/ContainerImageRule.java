@@ -11,6 +11,7 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.jenkinsci.Symbol;
@@ -81,7 +82,7 @@ public class ContainerImageRule extends EphemeralContainerStepRule {
     private static String wildcardToRegex(String pattern) {
         String[] list = StringUtils.splitPreserveAllTokens(pattern, "*");
         for (int i = 0; i < list.length; i++) {
-            if (!StringUtils.equals(list[i], "")) {
+            if (!Strings.CS.equals(list[i], "")) {
                 list[i] = Pattern.quote(list[i]);
             }
         }

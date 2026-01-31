@@ -8,7 +8,7 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodStatus;
 import java.util.List;
 import java.util.Optional;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.csanchez.jenkins.plugins.kubernetes.PodContainerSource;
 
 /**
@@ -40,7 +40,7 @@ public class EphemeralPodContainerSource extends PodContainerSource {
         }
 
         return ephemeralContainers.stream()
-                .filter(c -> StringUtils.equals(c.getName(), containerName))
+                .filter(c -> Strings.CS.equals(c.getName(), containerName))
                 .findAny()
                 .map(EphemeralContainer::getWorkingDir);
     }
@@ -59,7 +59,7 @@ public class EphemeralPodContainerSource extends PodContainerSource {
         }
 
         return podStatus.getEphemeralContainerStatuses().stream()
-                .filter(cs -> StringUtils.equals(cs.getName(), containerName))
+                .filter(cs -> Strings.CS.equals(cs.getName(), containerName))
                 .findFirst();
     }
 }
