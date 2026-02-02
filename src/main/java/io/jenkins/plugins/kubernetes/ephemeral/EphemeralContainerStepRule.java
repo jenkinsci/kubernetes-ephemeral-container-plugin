@@ -40,6 +40,10 @@ public abstract class EphemeralContainerStepRule extends AbstractDescribableImpl
             this.description = description;
         }
 
+        /**
+         * Get readable description of the action.
+         * @return action description
+         */
         public String getDescription() {
             return description;
         }

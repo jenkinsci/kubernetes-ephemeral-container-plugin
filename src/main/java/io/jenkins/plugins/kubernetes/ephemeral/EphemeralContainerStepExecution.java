@@ -48,7 +48,7 @@ import java.util.logging.Logger;
 import jenkins.metrics.api.Metrics;
 import jenkins.model.Jenkins;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.lang3.time.StopWatch;
 import org.csanchez.jenkins.plugins.kubernetes.KubernetesCloud;
@@ -80,17 +80,31 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
 
     private static final Logger LOGGER = Logger.getLogger(EphemeralContainerStepExecution.class.getName());
 
+    /** Max retry attempts if Pod update fails. */
     private static final int PATCH_MAX_RETRY =
             Integer.getInteger(EphemeralContainerStepExecution.class.getName() + ".patchMaxRetry", 10);
+    /** Max wait time in seconds between Pod update retries. */
     private static final int PATCH_RETRY_MAX_WAIT =
             Integer.getInteger(EphemeralContainerStepExecution.class.getName() + ".patchRetryMaxWaitSecs", 2);
+    /** Max retry attempts to start an ephemeral container. */
     private static final int START_MAX_RETRY =
             Integer.getInteger(EphemeralContainerStepExecution.class.getName() + ".startMaxRetry", 3);
+    /** Max wait time in seconds between container start retries. */
     private static final int START_RETRY_MAX_WAIT =
             Integer.getInteger(EphemeralContainerStepExecution.class.getName() + ".startRetryMaxWaitSecs", 2);
-    private static final Set<String> START_RETRY_REASONS = Collections.singleton("StartError");
+    /** Max time in seconds to wait for whoami commands to return. */
     private static final int WHOAMI_TIMEOUT =
             Integer.getInteger(EphemeralContainerStepExecution.class.getName() + ".whoamiTimeoutSecs", 180);
+
+    // Kubernetes state reason codes
+    private static final String KUBE_REASON_START_ERROR = "StartError";
+    private static final String KUBE_REASON_ERROR = "Error";
+    private static final String KUBE_REASON_CONFLICT = "Conflict";
+    private static final String KUBE_REASON_CONTAINER_CREATING = "ContainerCreating";
+    private static final String KUBE_REASON_POD_INITIALIZING = "PodInitializing";
+
+    /** Set of container start failure state reasons to retry on. */
+    private static final Set<String> START_RETRY_REASONS = Collections.singleton(KUBE_REASON_START_ERROR);
 
     @SuppressFBWarnings(value = "SE_TRANSIENT_FIELD_NOT_RESTORED", justification = "not needed on deserialization")
     private final transient EphemeralContainerStep step;
@@ -167,15 +181,26 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
                                         + ", trying again (" + retries + " of " + START_MAX_RETRY + ")");
                     }
                 } else {
-                    if (listener != null
-                            && StringUtils.contains(e.getState().getMessage(), "failed to create shim task: context")) {
+                    if (listener != null) {
                         // Attempt to explain common reasons why the container might not have started.
-                        listener.getLogger().println("""
-                                                Based on the container termination message there are several reasons that could have caused the failure:
-                                                  Resource Constraints:
-                                                    - Insufficient memory or CPU resources
-                                                    - Resource limits being hit during startup
-                                                    - Node pressure or high system load""");
+                        if (Strings.CS.contains(e.getState().getMessage(), "failed to create shim task: context")) {
+                            listener.getLogger().println("""
+                                     Based on the container termination message there are several reasons that could have caused the failure:
+                                       Resource Constraints:
+                                         - Insufficient memory or CPU resources
+                                         - Resource limits being hit during startup
+                                         - Node pressure or high system load""");
+                        }
+
+                        if (e.getState().getSignal() == null
+                                && e.getState().getMessage() == null
+                                && Strings.CS.equals(e.getState().getReason(), KUBE_REASON_ERROR)) {
+                            listener.getLogger().println("""
+                                     Based on the container termination message there are several reasons that could have caused the failure:
+                                        Container Image:
+                                          - The image platform architecture is not compatible with host node. For example
+                                            a linux/arm64 image running on a linux/amd64 kubernetes node.""");
+                        }
                     }
 
                     LOGGER.log(Level.FINEST, "Ephemeral container failed to start after " + retries + " retries", e);
@@ -250,7 +275,7 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
                     Status status = kce.getStatus();
                     if (retries < PATCH_MAX_RETRY
                             && status != null
-                            && StringUtils.equals(status.getReason(), "Conflict")) {
+                            && Strings.CS.equals(status.getReason(), KUBE_REASON_CONFLICT)) {
                         retries++;
 
                         // With large parallel operations the max retry may still get hit trying to provision
@@ -531,7 +556,7 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
             }
 
             return pod.getStatus().getEphemeralContainerStatuses().stream()
-                    .filter(status -> StringUtils.equals(status.getName(), containerName))
+                    .filter(status -> Strings.CS.equals(status.getName(), containerName))
                     .anyMatch(status -> {
                         onStatus(status);
                         if (running) {
@@ -552,7 +577,8 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
      */
     private static class EphemeralContainerRunningCondition extends EphemeralContainerStatusCondition {
 
-        private static final Set<String> IGNORE_REASONS = Set.of("ContainerCreating", "PodInitializing");
+        private static final Set<String> IGNORE_REASONS =
+                Set.of(KUBE_REASON_CONTAINER_CREATING, KUBE_REASON_POD_INITIALIZING);
 
         @CheckForNull
         private final TaskListener taskListener;
