@@ -34,7 +34,6 @@ import io.fabric8.kubernetes.client.dsl.ExecWatch;
 import io.fabric8.kubernetes.client.dsl.PodResource;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.io.Serial;
 import java.nio.charset.Charset;
 import java.util.Collections;
@@ -135,6 +134,12 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
         return false;
     }
 
+    /**
+     * Attempt to start ephemeral container and retry is start failed. This function handles
+     * common retry scenarios that may occur during heavy cluster load or lots of ephemeral
+     * containers starting at once.
+     * @throws Exception if container start fails or interrupted
+     */
     protected void startEphemeralContainerWithRetry() throws Exception {
         StepContext context = getContext();
         KubernetesNodeContext nodeContext = new KubernetesNodeContext(context);
@@ -175,16 +180,15 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
                                 + ", trying again (" + retries + " of " + START_MAX_RETRY + "): " + e.getMessage());
                     }
 
-                    if (listener != null) {
-                        listener.getLogger()
-                                .println("Ephemeral container terminated while starting with reason " + reason
-                                        + ", trying again (" + retries + " of " + START_MAX_RETRY + ")");
-                    }
+                    printConsole(
+                            listener,
+                            "Ephemeral container terminated while starting with reason " + reason + ", trying again ("
+                                    + retries + " of " + START_MAX_RETRY + ")");
                 } else {
                     if (listener != null) {
                         // Attempt to explain common reasons why the container might not have started.
                         if (Strings.CS.contains(e.getState().getMessage(), "failed to create shim task: context")) {
-                            listener.getLogger().println("""
+                            printConsole(listener, """
                                      Based on the container termination message there are several reasons that could have caused the failure:
                                        Resource Constraints:
                                          - Insufficient memory or CPU resources
@@ -195,7 +199,7 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
                         if (e.getState().getSignal() == null
                                 && e.getState().getMessage() == null
                                 && Strings.CS.equals(e.getState().getReason(), KUBE_REASON_ERROR)) {
-                            listener.getLogger().println("""
+                            printConsole(listener, """
                                      Based on the container termination message there are several reasons that could have caused the failure:
                                         Container Image:
                                           - The image platform architecture is not compatible with host node. For example
@@ -211,9 +215,12 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
         } while (true);
     }
 
-    @SuppressFBWarnings(
-            value = "DCN_NULLPOINTER_EXCEPTION",
-            justification = "misbehaving logger plugins should not stop prevent container termination")
+    /**
+     * Start the ephemeral container by patching the current Pod spec and wait for it
+     * to be ready. This function handles retry attempts if the patching operation
+     * encounters conflicts.
+     * @throws Exception container fails to start
+     */
     private void startEphemeralContainer() throws Exception {
         LOGGER.log(Level.FINE, "Starting ephemeral container step.");
         StepContext context = getContext();
@@ -241,14 +248,9 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
             }
 
             // Add link to the container logs
-            try {
-                listener.getLogger()
-                        .println("Starting ephemeral container " + containerUrl + " with image " + ec.getImage()
-                                + runningAs);
-            } catch (NullPointerException ignore) {
-                // can't trust all plugins manipulating the console log to handle multi-threading correctly
-                // (i.e. splunk-devops PipelineConsoleDecoder is not thread safe)
-            }
+            printConsole(
+                    listener,
+                    "Starting ephemeral container " + containerUrl + " with image " + ec.getImage() + runningAs);
         }
 
         // Patch the Pod with the new ephemeral container
@@ -390,6 +392,10 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
 
         // capture total container ready duration
         metrics.histogram(MetricNames.EPHEMERAL_CONTAINERS_CREATION_DURATION).update(startDuration.getTime());
+        printConsole(
+                listener,
+                "Ephemeral container " + containerName + " ready after "
+                        + startDuration.getDuration().toSeconds() + " seconds");
 
         EnvironmentExpander env = EnvironmentExpander.merge(
                 context.get(EnvironmentExpander.class),
@@ -437,6 +443,25 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
             StepContext context = getContext();
             closeQuietly(context, decorator);
             terminateEphemeralContainer(context, decorator.getContainerName());
+        }
+    }
+
+    /**
+     * Print message to listener logger.
+     * @param listener task listener or {@code null}
+     * @param message message to print
+     */
+    @SuppressFBWarnings(
+            value = "DCN_NULLPOINTER_EXCEPTION",
+            justification = "misbehaving logger plugins should not stop prevent container termination")
+    private static void printConsole(@CheckForNull TaskListener listener, String message) {
+        if (listener != null) {
+            try {
+                listener.getLogger().println(message);
+            } catch (NullPointerException ignore) {
+                // can't trust all plugins manipulating the console log to handle multi-threading correctly
+                // (i.e. splunk-devops PipelineConsoleDecoder is not thread safe)
+            }
         }
     }
 
@@ -597,11 +622,10 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
             // Stop waiting if the container already terminated
             ContainerStateTerminated terminated = status.getState().getTerminated();
             if (terminated != null) {
-                if (taskListener != null) {
-                    PrintStream logger = taskListener.getLogger();
-                    logger.println("Ephemeral container " + containerUrl + " failed to start: "
-                            + terminated.getMessage() + " (" + terminated.getReason() + ")");
-                }
+                printConsole(
+                        taskListener,
+                        "Ephemeral container " + containerUrl + " failed to start: " + terminated.getMessage() + " ("
+                                + terminated.getReason() + ")");
 
                 throw new EphemeralContainerTerminatedException(containerName, terminated);
             }
@@ -618,7 +642,7 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
                     }
 
                     logMsg.append(" (").append(waiting.getReason()).append(")");
-                    taskListener.getLogger().println(logMsg);
+                    printConsole(taskListener, logMsg.toString());
                 }
             }
         }
