@@ -21,7 +21,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 
 /**
  * Test extension that exposes from the provided Kubernetes cluster namespace to
- * ths test Jenkins instance running outside the cluster. This tunnel is created
+ * this test Jenkins instance running outside the cluster. This tunnel is created
  * using the <a href="https://github.com/omrikiei/ktunnel">ktunnel</a> command.
  *
  * @see #ktunnelCmd()
