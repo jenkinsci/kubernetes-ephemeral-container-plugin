@@ -44,7 +44,7 @@ public class ImageReference {
      * responsibility of the cluster.
      *
      * @param reference reference string, not null
-     * @return image reference or empty if invalid refence format
+     * @return image reference or empty if invalid reference format
      */
     public static Optional<ImageReference> parse(@NonNull String reference) {
         String digest = null;

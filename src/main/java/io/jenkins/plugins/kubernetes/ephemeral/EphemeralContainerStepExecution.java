@@ -98,9 +98,13 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
     // Kubernetes state reason codes
     private static final String KUBE_REASON_START_ERROR = "StartError";
     private static final String KUBE_REASON_ERROR = "Error";
+    private static final String KUBE_REASON_ERR_IMAGE_PULL = "ErrImagePull";
     private static final String KUBE_REASON_CONFLICT = "Conflict";
     private static final String KUBE_REASON_CONTAINER_CREATING = "ContainerCreating";
     private static final String KUBE_REASON_POD_INITIALIZING = "PodInitializing";
+
+    // Kubernetes state messages
+    private static final String KUBE_MESSAGE_UNEXPECTED_HTTP_STATUS = "unexpected HTTP status";
 
     /** Set of container start failure state reasons to retry on. */
     private static final Set<String> START_RETRY_REASONS = Collections.singleton(KUBE_REASON_START_ERROR);
@@ -634,6 +638,13 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
                 ContainerStateWaiting waiting = status.getState().getWaiting();
                 // skip initial "ContainerCreating" event
                 if (waiting != null && !IGNORE_REASONS.contains(waiting.getReason())) {
+                    // quit early on image pull errors, except for unexpected http status errors which might
+                    // resolve (for example service temporarily unavailable)
+                    if (Strings.CS.equals(waiting.getReason(), KUBE_REASON_ERR_IMAGE_PULL)
+                            && !Strings.CI.contains(waiting.getMessage(), KUBE_MESSAGE_UNEXPECTED_HTTP_STATUS)) {
+                        throw new EphemeralContainerImagePullException(waiting);
+                    }
+
                     StringBuilder logMsg =
                             new StringBuilder().append("Ephemeral container ").append(containerUrl);
                     String message = waiting.getMessage();
@@ -672,6 +683,20 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
 
         public String getContainerName() {
             return containerName;
+        }
+    }
+
+    /**
+     * Exception thrown by {@link EphemeralContainerRunningCondition} if the container has an unrecoverable image pull
+     * error while starting. This will immediately exit the waitUntilCondition.
+     */
+    private static class EphemeralContainerImagePullException extends KubernetesClientException {
+
+        @Serial
+        private static final long serialVersionUID = 3455221650416693019L;
+
+        EphemeralContainerImagePullException(@NonNull ContainerStateWaiting state) {
+            super("container image pull error while waiting to start: " + state);
         }
     }
 }
