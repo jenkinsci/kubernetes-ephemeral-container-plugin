@@ -38,7 +38,7 @@ public class ImageReference {
      * meaning if no registry/domain component is specified, it will be assumed
      * to be "{@code docker.io}".
      * <p>
-     * This parse image references that are not technically valid. The may purpose
+     * This parses image references that are not technically valid. The main purpose
      * is to break it into component pieces so rules can be applied against them.
      * We are not concerned about strict limits as that will ultimately be the
      * responsibility of the cluster.
