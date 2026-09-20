@@ -270,11 +270,13 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
         try {
             do {
                 try {
-                    podResource.ephemeralContainers().edit(pod -> new PodBuilder(pod)
-                            .editSpec()
-                            .addToEphemeralContainers(ec)
-                            .endSpec()
-                            .build());
+                    podResource
+                            .ephemeralContainers()
+                            .edit(pod -> new PodBuilder(pod)
+                                    .editSpec()
+                                    .addToEphemeralContainers(ec)
+                                    .endSpec()
+                                    .build());
 
                     break; // Success
                 } catch (KubernetesClientException kce) {
@@ -559,7 +561,7 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
         }
 
         @Override
-        public void finished(StepContext context) throws Exception {
+        protected void finished(StepContext context) throws Exception {
             terminateEphemeralContainer(context, containerName);
         }
     }
