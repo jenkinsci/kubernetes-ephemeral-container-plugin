@@ -105,6 +105,9 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
 
     // Kubernetes state messages
     private static final String KUBE_MESSAGE_UNEXPECTED_HTTP_STATUS = "unexpected HTTP status";
+    private static final String KUBE_MESSAGE_UNEXPECTED_STATUS_FROM_HEAD_REQ = "unexpected status from HEAD request";
+    private static final String KUBE_MESSAGE_INVALID_STATUS_CODE_FROM_REGISTRY_503 =
+            "invalid status code from registry 503";
 
     /** Set of container start failure state reasons to retry on. */
     private static final Set<String> START_RETRY_REASONS = Collections.singleton(KUBE_REASON_START_ERROR);
@@ -643,7 +646,10 @@ public class EphemeralContainerStepExecution extends GeneralNonBlockingStepExecu
                     // quit early on image pull errors, except for unexpected http status errors which might
                     // resolve (for example service temporarily unavailable)
                     if (Strings.CS.equals(waiting.getReason(), KUBE_REASON_ERR_IMAGE_PULL)
-                            && !Strings.CI.contains(waiting.getMessage(), KUBE_MESSAGE_UNEXPECTED_HTTP_STATUS)) {
+                            && !Strings.CI.contains(waiting.getMessage(), KUBE_MESSAGE_UNEXPECTED_HTTP_STATUS)
+                            && !Strings.CI.contains(waiting.getMessage(), KUBE_MESSAGE_UNEXPECTED_STATUS_FROM_HEAD_REQ)
+                            && !Strings.CI.contains(
+                                    waiting.getMessage(), KUBE_MESSAGE_INVALID_STATUS_CODE_FROM_REGISTRY_503)) {
                         throw new EphemeralContainerImagePullException(waiting);
                     }
 
